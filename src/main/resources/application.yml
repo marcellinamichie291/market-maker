@@ -1,0 +1,27 @@
+spring:
+  data:
+    mongodb:
+      authentication-database: admin
+      username: rootuser
+      password: rootpass
+      database: market_maker
+      port: 27017
+      host: localhost
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: lemkomisza2@gmail.com
+    password: wpakpxnkrqazvvjg
+    addressee: lemkomisza2@gmail.com
+    properties:
+      mail.transport.protocol: smtp
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+      mail.debug: true
+
+application:
+  exchange:
+    bitmart:
+      apiKey: 37341811b7b861182aa68a5d13d5c1be082dead1
+      apiSecret: 73363b1bd113fd721d91f37af17d85da60dfe1aebc164b11b07c2ba441f97399
+      memo: memo
