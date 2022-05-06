@@ -1,4 +1,4 @@
-![`market_maker_scheme`](..\market-maker\src\main\resources\images\market_maker_scheme.PNG)
+![`market_maker_scheme`](https://github.com/michallemko/market-maker/blob/main/src/main/resources/images/market_maker_scheme.PNG)
 
 Each actor is working on separate thread and communication between each other using events
 ### Guardian
