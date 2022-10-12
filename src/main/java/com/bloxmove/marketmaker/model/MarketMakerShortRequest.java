@@ -13,4 +13,5 @@ public class MarketMakerShortRequest {
     ExchangeName exchangeName;
     @NotNull
     String currencyPair;
+    Boolean needCancelOrders;
 }

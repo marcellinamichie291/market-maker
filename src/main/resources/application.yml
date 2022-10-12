@@ -22,6 +22,11 @@ spring:
 application:
   exchange:
     bitmart:
-      apiKey: 37341811b7b861182aa68a5d13d5c1be082dead1
-      apiSecret: 73363b1bd113fd721d91f37af17d85da60dfe1aebc164b11b07c2ba441f97399
-      memo: memo
+      - url: https://api-cloud.bitmart.com
+        apiKey: 37341811b7b861182aa68a5d13d5c1be082dead1
+        apiSecret: 73363b1bd113fd721d91f37af17d85da60dfe1aebc164b11b07c2ba441f97399
+        memo: memo
+      - url: https://api-cloud.bitmart.com
+        apiKey: 37341811b7b861182aa68a5d13d5c1be082dead1
+        apiSecret: 73363b1bd113fd721d91f37af17d85da60dfe1aebc164b11b07c2ba441f97399
+        memo: memo

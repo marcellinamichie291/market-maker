@@ -33,7 +33,7 @@ public class MarketMakerControllerImpl implements MarketMakerController {
     }
 
     @Override
-    public List<MarketMaker> get(MarketMakerStatus marketMakerStatus) {
-        return marketMakerRepository.findByStatus(marketMakerStatus);
+    public List<MarketMaker> get(String status) {
+        return marketMakerRepository.findByStatus(MarketMakerStatus.valueOf(status));
     }
 }

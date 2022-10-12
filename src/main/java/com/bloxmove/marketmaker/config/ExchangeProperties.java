@@ -7,7 +7,9 @@ import org.springframework.validation.annotation.Validated;
 
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
+import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
 @Validated
 @ConfigurationProperties(prefix = "application")
@@ -15,27 +17,30 @@ import java.util.Map;
 public class ExchangeProperties {
 
     @NotNull
-    private final Map<String, Exchange> exchange;
+    private final Map<String, List<Exchange>> exchange;
 
-    public ExchangeProperties(Map<String, Exchange> exchange) {
+    public ExchangeProperties(Map<String, List<Exchange>> exchange) {
         this.exchange = exchange;
     }
 
+    public Exchange getExchange(String exchangeName) {
+        List<Exchange> exchanges = exchange.get(exchangeName);
+        return exchanges.get(new Random().nextInt(exchanges.size()));
+    }
+
+    public String getUrl(String exchangeName) {
+        return getExchange(exchangeName).getUrl();
+    }
+
     public String getApiKey(String exchangeName) {
-        return exchange.get(exchangeName).getApiKey();
-    }
-
-    public String getApiSecret(String exchangeName) {
-        return exchange.get(exchangeName).getApiSecret();
-    }
-
-    public String getMemo(String exchangeName) {
-        return exchange.get(exchangeName).getMemo();
+        return getExchange(exchangeName).getApiKey();
     }
 
     @Data
-    private static class Exchange {
+    public static class Exchange {
 
+        @NotBlank
+        private final String url;
         @NotBlank
         private final String apiKey;
         @NotBlank

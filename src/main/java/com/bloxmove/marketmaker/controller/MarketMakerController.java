@@ -3,7 +3,6 @@ package com.bloxmove.marketmaker.controller;
 import com.bloxmove.marketmaker.model.MarketMaker;
 import com.bloxmove.marketmaker.model.MarketMakerRequest;
 import com.bloxmove.marketmaker.model.MarketMakerShortRequest;
-import com.bloxmove.marketmaker.model.MarketMakerStatus;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -37,5 +36,5 @@ public interface MarketMakerController {
     @Operation(summary = "Get market makers")
     @GetMapping
     List<MarketMaker> get(@Parameter(name = "status",
-            description = "Market maker status", required = true) MarketMakerStatus marketMakerStatus);
+            description = "Market maker status", required = true) String status);
 }

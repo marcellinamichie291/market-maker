@@ -2,12 +2,8 @@ package com.bloxmove.marketmaker.config;
 
 import akka.actor.typed.ActorRef;
 import akka.actor.typed.ActorSystem;
-import com.bitmart.api.Call;
-import com.bitmart.api.CloudContext;
-import com.bitmart.api.key.CloudKey;
 import com.bloxmove.marketmaker.actor.ExchangeManagerActor;
 import com.bloxmove.marketmaker.actor.Guardian;
-import com.bloxmove.marketmaker.model.ExchangeName;
 import com.bloxmove.marketmaker.service.MailService;
 import com.bloxmove.marketmaker.service.factory.ExchangeClientFactory;
 import com.bloxmove.marketmaker.service.ExchangeManagerActorWrapper;
@@ -59,14 +55,6 @@ public class MarketMakerConfiguration {
     }
 
     @Bean
-    public Call bitMartClient(ExchangeProperties exchangeProperties) {
-        return new Call(new CloudContext(new CloudKey(
-                exchangeProperties.getApiKey(ExchangeName.BITMART.toString()),
-                exchangeProperties.getApiSecret(ExchangeName.BITMART.toString()),
-                exchangeProperties.getMemo(ExchangeName.BITMART.toString()))));
-    }
-
-    @Bean
     public JavaMailSender mailSender(EmailProperties emailProperties) {
         JavaMailSenderImpl mailSender = new JavaMailSenderImpl();
         mailSender.setHost(emailProperties.getHost());
@@ -80,4 +68,20 @@ public class MarketMakerConfiguration {
 
         return mailSender;
     }
+
+//    @Bean
+//    public CorsWebFilter corsWebFilter() {
+//        CorsConfiguration corsConfiguration = new CorsConfiguration();
+//        corsConfiguration.setAllowCredentials(true);
+//        corsConfiguration.setAllowedOrigins(Arrays.asList("http://localhost:4200"));
+//        corsConfiguration.setAllowedHeaders(Arrays.asList("Origin", "Access-Control-Allow-Origin", "Content-Type",
+//                "Accept", "Authorization", "Origin, Accept", "X-Requested-With",
+//                "Access-Control-Request-Method", "Access-Control-Request-Headers"));
+//        corsConfiguration.setExposedHeaders(Arrays.asList("Origin", "Content-Type", "Accept", "Authorization",
+//                "Access-Control-Allow-Origin", "Access-Control-Allow-Origin", "Access-Control-Allow-Credentials"));
+//        corsConfiguration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+//        UrlBasedCorsConfigurationSource urlBasedCorsConfigurationSource = new UrlBasedCorsConfigurationSource();
+//        urlBasedCorsConfigurationSource.registerCorsConfiguration("/**", corsConfiguration);
+//        return new CorsWebFilter(urlBasedCorsConfigurationSource);
+//    }
 }

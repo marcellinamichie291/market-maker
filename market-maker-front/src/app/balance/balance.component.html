@@ -1,0 +1,22 @@
+<div class="container" id="main-container">
+    <div class="row">
+        <table class="table align-middle mb-0 bg-white">
+          <thead class="bg-light">
+            <tr>
+              <th>Currency</th>
+              <th>Balance</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let balance of balances">
+              <td>
+                <div class="d-flex align-items-center">{{balance.name}}</div>
+              </td>
+              <td>
+                <div class="d-flex align-items-center">{{balance.value}}</div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+    </div>
+</div>

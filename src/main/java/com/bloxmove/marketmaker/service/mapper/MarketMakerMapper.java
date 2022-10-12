@@ -17,5 +17,6 @@ public interface MarketMakerMapper {
     @Mapping(target = "updated", ignore = true)
     MarketMaker map(MarketMakerRequest marketMakerRequest);
 
+    @Mapping(target = "needCancelOrders", ignore = true)
     MarketMakerRequest map(MarketMaker marketMaker);
 }

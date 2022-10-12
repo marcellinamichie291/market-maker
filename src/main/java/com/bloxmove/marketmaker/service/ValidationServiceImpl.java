@@ -10,33 +10,30 @@ import static com.bloxmove.marketmaker.util.Constants.SCALE_ROUND;
 @Service
 public class ValidationServiceImpl implements ValidationService {
 
-    private static final String MIN_HIGHER_TARGET_EXC = "Min price '%s' should be lower than target price '%s'";
-    private static final String TARGET_HIGHER_MAX_EXC = "Target price '%s' should be lower than max price '%s'";
+    private static final String MIN_PRICE_EXC = "Min price should be lower than 1";
+    private static final String TARGET_PRICE_EXC = "Target price should be in range from 0.95 to 1.05";
+    private static final String MAX_PRICE_EXC = "Max price should be higher than 1";
     private static final String MIN_SIZE_EXC = "Amount should be more than 0.1";
-    private static final String MIN_SIZE_PRICE_EXC = "Single order amount*price should be more than 5";
 
     @Override
     public void validate(MarketMakerRequest marketMakerRequest) {
         BigDecimal gridCount = BigDecimal.valueOf(marketMakerRequest.getGridCount());
         BigDecimal singleAmount = marketMakerRequest.getAmount().divide(gridCount, SCALE_ROUND)
                 .divide(BigDecimal.valueOf(2), SCALE_ROUND);
-
-        BigDecimal minPrice = marketMakerRequest.getMinPrice();
         BigDecimal targetPrice = marketMakerRequest.getTargetPrice();
-        BigDecimal maxPrice = marketMakerRequest.getMaxPrice();
-        BigDecimal sizeForMinPrice = singleAmount.multiply(minPrice, SCALE_ROUND);
 
-        if (minPrice.compareTo(targetPrice) > 0) {
-            throw new IllegalArgumentException(String.format(MIN_HIGHER_TARGET_EXC, minPrice, targetPrice));
+        if (marketMakerRequest.getMinPrice().compareTo(BigDecimal.ONE) > 0) {
+            throw new IllegalArgumentException(MIN_PRICE_EXC);
         }
-        if (targetPrice.compareTo(maxPrice) > 0) {
-            throw new IllegalArgumentException(String.format(TARGET_HIGHER_MAX_EXC, targetPrice, maxPrice));
+        if (targetPrice.compareTo(BigDecimal.valueOf(1.05)) > 0
+                || targetPrice.compareTo(BigDecimal.valueOf(0.95)) < 0) {
+            throw new IllegalArgumentException(TARGET_PRICE_EXC);
+        }
+        if (marketMakerRequest.getMaxPrice().compareTo(BigDecimal.ONE) < 0) {
+            throw new IllegalArgumentException(MAX_PRICE_EXC);
         }
         if (singleAmount.compareTo(BigDecimal.valueOf(0.1)) < 0) {
             throw new IllegalArgumentException(MIN_SIZE_EXC);
-        }
-        if (sizeForMinPrice.compareTo(BigDecimal.valueOf(5)) < 0) {
-            throw new IllegalArgumentException(MIN_SIZE_PRICE_EXC);
         }
     }
 }

@@ -1,0 +1,210 @@
+<div class="container" id="main-container">
+    <div class="row">
+      <div *ngFor="let marketMaker of marketMakers" class="col-md-6 col-xl-4">
+        <div class="card m-b-30">
+            <div class="card-body row">
+              <div class="col-3">
+                  <a><img src="{{CurrencyPairToIconMapping[marketMaker.currencyPair!]}}" alt="" class="img-fluid"></a>
+              </div>
+              <div class="col-8 card-title align-self-center mb-0">
+                  <h5>{{marketMaker.currencyPair}}</h5>
+                  <h5>{{marketMaker.exchangeName}}</h5>
+              </div>
+            </div>
+            <ul class="list-group list-group-flush">
+              <li class="list-group-item"><i class="fa float-right"></i>Created: {{marketMaker.created}}</li>
+              <li class="list-group-item"><i class="fa float-right"></i>Amount: {{marketMaker.amount}}</li>
+              <li class="list-group-item"><i class="fa float-right"></i>Min price : {{marketMaker.minPrice}}</li>
+              <li class="list-group-item"><i class="fa float-right"></i>Target price : {{marketMaker.targetPrice}}</li>
+              <li class="list-group-item"><i class="fa float-right"></i>Max price : {{marketMaker.maxPrice}}</li>
+              <li class="list-group-item"><i class="fa float-right"></i>Delay : {{marketMaker.delay}}</li>
+              <li class="list-group-item"><i class="fa float-right"></i>Grid count : {{marketMaker.gridCount}}</li>
+              <li class="list-group-item"><i class="fa float-right"></i>Min first currency : {{marketMaker.minFirstCurrency}}</li>
+              <li class="list-group-item"><i class="fa float-right"></i>Min second currency : {{marketMaker.minSecondCurrency}}</li>
+            </ul>
+            <div class="card-body" *ngIf="marketMaker.status == 'WORKING'">
+              <div class="float-right btn-group btn-group-sm">
+                  <a (click)="onOpenModal(null!, 'create')" class="btn btn-success rounded-pill tooltips" data-placement="top" data-original-title="Create"><i class="fa fa-plus-square"></i> </a>
+                  <a (click)="onOpenModal(marketMaker, 'update')" class="btn btn-warning rounded-pill tooltips" data-placement="top" data-original-title="Update"><i class="fa fa-pencil"></i> </a>
+                  <a (click)="onOpenModal(marketMaker, 'stop')" class="btn btn-danger rounded-pill tooltips" data-placement="top" data-original-title="Stop"><i class="fa fa-times"></i></a>
+                  <a (click)="getArchivedMarketMakers()" class="btn btn-secondary rounded-pill tooltips" data-placement="top" data-original-title="Archived"><i class="fa fa-archive"></i></a>
+              </div>
+            </div>
+        </div>
+      </div>
+    </div>
+  
+    <!-- Create Market Maker Modal -->
+    <div class="modal fade rounded-pill" id="createMarketMakerModal" tabindex="-1" role="dialog" aria-labelledby="createMarketMakerModalLabel" aria-hidden="true">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+              <h5 class="modal-title" id="createMarketMakerModalLabel">Create Market Maker</h5>
+              <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+              </button>
+          </div>
+          <div class="modal-body">
+              <form #createForm="ngForm" (ngSubmit)="onCreateMarketMaker(createForm)">
+              <div class="form-group">
+                <label for="exchangeName">Exchange Name</label>
+                <select ngModel="{{exchangeNames[0]}}"  name="exchangeName" class="form-control" id="exchangeName" placeholder="Exchange Name" required>
+                  <option *ngFor="let exchangeName of exchangeNames" [value]="exchangeName"> {{exchangeName}}</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="currencyPair">Currency Pair</label>
+                <select ngModel="{{currencyPairs[0]}}" name="currencyPair" class="form-control" id="currencyPair" placeholder="Currency Pair" required>
+                  <option *ngFor="let currencyPair of currencyPairs" [value]="currencyPair"> {{currencyPair}}</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="amount">Amount</label>
+                <input type="number" ngModel name="amount" class="form-control" id="amount" placeholder="Amount" required>
+              </div>
+              <div class="form-group">
+                <label for="minPrice">Min Price</label>
+                <input type="number" ngModel name="minPrice" class="form-control" id="minPrice" placeholder="Min Price" required>
+              </div>
+              <div class="form-group">
+                <label for="targetPrice">Target Price</label>
+                <input type="number" ngModel name="targetPrice" class="form-control" id="targetPrice" placeholder="Target Price" required>
+              </div>
+              <div class="form-group">
+                <label for="maxPrice">Max Price</label>
+                <input type="number" ngModel name="maxPrice" class="form-control" id="maxPrice" placeholder="Max Price" required>
+              </div>
+              <div class="form-group">
+                <label for="delay">Delay</label>
+                <input type="number" ngModel name="delay" class="form-control" id="delay" placeholder="Delay" required>
+              </div>
+              <div class="form-group">
+                <label for="gridCount">Grid Count</label>
+                <input type="number" ngModel name="gridCount" class="form-control" id="gridCount" placeholder="Grid Count" required>
+              </div>
+              <div class="form-group">
+                <label for="minFirstCurrency">Min First Currency</label>
+                <input type="number" ngModel name="minFirstCurrency" class="form-control" id="minFirstCurrency" placeholder="Min First Currency" required>
+              </div>
+              <div class="form-group">
+                <label for="minSecondCurrency">Min Second Currency</label>
+                <input type="number" ngModel name="minSecondCurrency" class="form-control" id="minSecondCurrency" placeholder="Min Second Currency" required>
+              </div>
+              <div class="modal-footer">
+                <button type="button" id="create-market-maker-form" class="btn btn-danger" data-dismiss="modal">Discard</button>
+                <button [disabled]="createForm.invalid" type="submit" class="btn btn-success" >Create Market Maker</button>
+              </div>
+              </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  
+    <!-- Update Market Maker Modal -->
+    <div class="modal fade rounded-pill" id="updateMarketMakerModal" tabindex="-1" role="dialog" aria-labelledby="updateMarketMakerModalLabel" aria-hidden="true">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="updateMarketMakerModalLabel">Update Market Maker</h5>
+              <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+            <div class="modal-body">
+              <form #updateForm="ngForm" (ngSubmit)="onUpdateMarketMaker(updateForm)">
+                <div class="form-group">
+                  <label for="exchangeName">Exchange Name</label>
+                  <select ngModel="{{updateMarketMaker?.exchangeName}}" name="exchangeName" class="form-control" id="exchangeName" placeholder="Exchange Name" required>
+                    <option *ngFor="let exchangeName of exchangeNames" [value]="exchangeName"> {{exchangeName}}</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="currencyPair">Currency Pair</label>
+                  <select ngModel="{{updateMarketMaker?.currencyPair}}" name="currencyPair" class="form-control" id="currencyPair" placeholder="Currency Pair" required>
+                    <option *ngFor="let currencyPair of currencyPairs" [value]="currencyPair"> {{currencyPair}}</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="amount">Amount</label>
+                  <input type="number" ngModel="{{updateMarketMaker?.amount}}" name="amount" class="form-control" id="amount" placeholder="Amount" required>
+                </div>
+                <div class="form-group">
+                  <label for="minPrice">Min Price</label>
+                  <input type="number" ngModel="{{updateMarketMaker?.minPrice}}" name="minPrice" class="form-control" id="minPrice" placeholder="Min Price" required>
+                </div>
+                <div class="form-group">
+                  <label for="targetPrice">Target Price</label>
+                  <input type="number" ngModel="{{updateMarketMaker?.targetPrice}}" name="targetPrice" class="form-control" id="targetPrice" placeholder="Target Price" required>
+                </div>
+                <div class="form-group">
+                  <label for="maxPrice">Max Price</label>
+                  <input type="number" ngModel="{{updateMarketMaker?.maxPrice}}" name="maxPrice" class="form-control" id="maxPrice" placeholder="Max Price" required>
+                </div>
+                <div class="form-group">
+                  <label for="delay">Delay</label>
+                  <input type="number" ngModel="{{updateMarketMaker?.delay}}" name="delay" class="form-control" id="delay" placeholder="Delay" required>
+                </div>
+                <div class="form-group">
+                  <label for="gridCount">Grid Count</label>
+                  <input type="number" ngModel="{{updateMarketMaker?.gridCount}}" name="gridCount" class="form-control" id="gridCount" placeholder="Grid Count" required>
+                </div>
+                <div class="form-group">
+                  <label for="minFirstCurrency">Min First Currency</label>
+                  <input type="number" ngModel="{{updateMarketMaker?.minFirstCurrency}}" name="minFirstCurrency" class="form-control" id="minFirstCurrency" placeholder="Min First Currency" required>
+                </div>
+                <div class="form-group">
+                  <label for="minSecondCurrency">Min Second Currency</label>
+                  <input type="number" ngModel="{{updateMarketMaker?.minSecondCurrency}}" name="minSecondCurrency" class="form-control" id="minSecondCurrency" placeholder="Min Second Currency" required>
+                </div>
+                <div class="form-group">
+                  <label>
+                    <input type="checkbox" ngModel name="needCancelOrders" id="needCancelOrders"> Cancel existing orders
+                  </label>
+                </div>
+                <div class="modal-footer">
+                  <button type="button" id="update-market-maker-form" class="btn btn-danger" data-dismiss="modal">Discard</button>
+                  <button [disabled]="updateForm.invalid" type="submit" class="btn btn-success" >Update Market Maker</button>
+                </div>
+              </form>
+            </div>
+        </div>
+      </div>
+    </div>
+  
+    <!-- Stop Market Maker Modal -->
+    <div class="modal fade rounded-pill" id="stopMarketMakerModal" tabindex="-1" role="dialog" aria-labelledby="stopMarketMakerModelLabel" aria-hidden="true">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="stopMarketMakerModelLabel">Stop Market Maker</h5>
+              <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+            <div class="modal-body">
+              <form #stopForm="ngForm" (ngSubmit)="onStopMarketMaker(stopMarketMaker!, stopForm)">
+                <p>Are you sure you want to stop Market Maker?</p>
+                <div class="form-group">
+                  <label>
+                    <input type="checkbox" ngModel name="needCancelOrders" id="needCancelOrders"> Cancel existing orders
+                  </label>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" id="stop-market-maker-form" class="btn btn-secondary" data-dismiss="modal">No</button>
+                    <button [disabled]="stopForm.invalid" type="submit" class="btn btn-danger">Yes</button>
+                </div>
+              </form>
+            </div>
+        </div>
+      </div>
+    </div>
+</div>
+  
+  <!-- No market makers alert -->
+  <div *ngIf="marketMakers?.length == 0" class="col-md-6 col-xl-2">
+  <div class="alert alert-info" role="alert">
+    <h4 class="alert-heading">No Market Makers!</h4>
+    <p>No Market Makers were found.</p>
+    <a class="nav-link btn-success rounded-pill" (click)="onOpenModal(null!, 'create')">Create Market Maker<span class="sr-only">(current)</span></a>
+  </div>
+  </div>

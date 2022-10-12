@@ -3,7 +3,6 @@ package com.bloxmove.marketmaker.model;
 import lombok.Getter;
 import lombok.Setter;
 
-import javax.validation.constraints.DecimalMin;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 import java.math.BigDecimal;
@@ -34,4 +33,5 @@ public class MarketMakerRequest {
     BigDecimal minFirstCurrency;
     @NotNull
     BigDecimal minSecondCurrency;
+    Boolean needCancelOrders;
 }

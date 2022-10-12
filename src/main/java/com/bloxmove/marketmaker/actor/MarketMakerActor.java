@@ -2,10 +2,7 @@ package com.bloxmove.marketmaker.actor;
 
 import akka.actor.typed.ActorRef;
 import akka.actor.typed.Behavior;
-import akka.actor.typed.javadsl.AbstractBehavior;
-import akka.actor.typed.javadsl.ActorContext;
-import akka.actor.typed.javadsl.Behaviors;
-import akka.actor.typed.javadsl.Receive;
+import akka.actor.typed.javadsl.*;
 import com.bloxmove.marketmaker.model.MarketMakerRequest;
 import com.bloxmove.marketmaker.service.MailService;
 import com.bloxmove.marketmaker.service.factory.ExchangeClientFactory;
@@ -14,133 +11,109 @@ import com.bloxmove.marketmaker.util.ActorUtils;
 import lombok.ToString;
 import lombok.Value;
 import lombok.val;
-import reactor.util.function.Tuples;
 
-import java.math.BigDecimal;
 import java.time.Duration;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
 
-import static com.bloxmove.marketmaker.util.ActorUtils.prepareTags;
 import static com.bloxmove.marketmaker.util.BehaviorHelper.prepareDefaultManagersBehavior;
-import static com.bloxmove.marketmaker.util.Constants.SCALE_ROUND;
 
 public class MarketMakerActor extends AbstractBehavior<MarketMakerActor.Command> {
 
+    private final TimerScheduler<Command> timer;
     private final ExchangeClientFactory exchangeClientFactory;
     private final MailService mailService;
     private final NotificationRepository notificationRepository;
-    private final MarketMakerRequest marketMakerRequest;
-    private final BigDecimal singleAmount;
-    private final BigDecimal maxPriceDelta;
-    private final BigDecimal minPriceDelta;
-    private final Map<String, ActorRef<PlaceOrdersActor.Command>> placeOrderActors;
+    private final ActorRef<StopPlaceOrdersActorsResponse> updatesTo;
+    private MarketMakerRequest marketMakerRequest;
     private final ActorRef<CheckBalanceActor.Command> checkBalanceActor;
+    private final ActorRef<CancelOrdersActor.Command> cancelOrdersActor;
 
     public static Behavior<MarketMakerActor.Command> create(ExchangeClientFactory exchangeClientFactory,
                                                             MailService mailService,
                                                             NotificationRepository notificationRepository,
+                                                            ActorRef<StopPlaceOrdersActorsResponse> updatesTo,
                                                             MarketMakerRequest marketMakerRequest) {
-        return Behaviors.logMessages(Behaviors.withTimers(timer -> Behaviors.setup(ctx -> {
-
-                    ctx.getSelf().tell(CreatePlaceOrdersActor.INSTANCE);
-                    timer.startTimerWithFixedDelay(CreatePlaceOrdersActor.INSTANCE,
-                            Duration.ofSeconds(marketMakerRequest.getDelay()));
-
-                    return new MarketMakerActor(ctx, exchangeClientFactory, mailService, notificationRepository,
-                            marketMakerRequest);
-                })
+        return Behaviors.logMessages(Behaviors.withTimers(timer -> Behaviors.setup(ctx ->
+                new MarketMakerActor(ctx, timer, exchangeClientFactory, mailService, notificationRepository,
+                        updatesTo, marketMakerRequest))
         ));
     }
 
-    private MarketMakerActor(ActorContext<Command> ctx, ExchangeClientFactory exchangeClientFactory,
-                             MailService mailService, NotificationRepository notificationRepository,
+    private MarketMakerActor(ActorContext<Command> ctx, TimerScheduler<Command> timer,
+                             ExchangeClientFactory exchangeClientFactory, MailService mailService,
+                             NotificationRepository notificationRepository,
+                             ActorRef<StopPlaceOrdersActorsResponse> updatesTo,
                              MarketMakerRequest marketMakerRequest) {
         super(ctx);
+        this.timer = timer;
         this.exchangeClientFactory = exchangeClientFactory;
         this.mailService = mailService;
         this.notificationRepository = notificationRepository;
+        this.updatesTo = updatesTo;
         this.marketMakerRequest = marketMakerRequest;
-        this.placeOrderActors = new HashMap<>();
         this.checkBalanceActor = spawnBalanceActor();
+        this.cancelOrdersActor = spawnCancelOrdersActor();
         ctx.getLog().debug("Created");
-
-        BigDecimal gridCount = BigDecimal.valueOf(marketMakerRequest.getGridCount());
-        BigDecimal maxTargetDelta = marketMakerRequest.getMaxPrice().subtract(
-                marketMakerRequest.getTargetPrice(), SCALE_ROUND);
-        BigDecimal minTargetDelta = marketMakerRequest.getTargetPrice().subtract(
-                marketMakerRequest.getMinPrice(), SCALE_ROUND);
-        this.singleAmount = marketMakerRequest.getAmount().divide(gridCount, SCALE_ROUND)
-                .divide(BigDecimal.valueOf(2), SCALE_ROUND);
-        this.maxPriceDelta = maxTargetDelta.divide(gridCount, SCALE_ROUND);
-        this.minPriceDelta = minTargetDelta.divide(gridCount, SCALE_ROUND);
     }
 
     @Override
     public Receive<Command> createReceive() {
-        return workingBehavior();
-    }
-
-    private Receive<Command> workingBehavior() {
         return newReceiveBuilder()
-                .onMessage(CreatePlaceOrdersActor.class, it -> onCreatePlaceOrdersActorRequest())
-                .onMessage(PlaceOrdersWrappedResp.class, this::onPlaceOrdersResp)
-                .onMessage(StopPlaceOrdersActors.class, it -> onStopPlaceOrdersActorsRequest())
+                .onMessage(InitializeMarketMaker.class, this::onInitializeMarketMaker)
+                .onMessage(SingleExecution.class, it -> onSingleExecution())
+                .onMessage(CancelOrdersWrappedResp.class, this::onCancelOrdersResp)
+                .onMessage(StopMarketMaker.class, it -> onStopMarketMaker())
                 .build();
     }
 
-    private Receive<Command> stoppingBehavior() {
+    public Receive<Command> stoppingBehavior() {
         return newReceiveBuilder()
-                .onMessage(CreatePlaceOrdersActor.class, it -> onCreatePlaceOrdersRequestWhileStopping())
-                .onMessage(PlaceOrdersWrappedResp.class, this::onPlaceOrdersResp)
+                .onMessage(InitializeMarketMaker.class, this::onInitializeMarketMakerWhileStopping)
+                .onMessage(SingleExecution.class, it -> onSingleExecutionWhileStopping())
+                .onMessage(CancelOrdersWrappedResp.class, this::onCancelOrdersRespWhileStopping)
+                .onMessage(StopMarketMaker.class, it -> onStopMarketMakerWhileStopping())
                 .build();
     }
 
-    private Behavior<Command> onCreatePlaceOrdersActorRequest() {
-        getContext().getLog().debug("Creating PlaceOrdersActor for {}", marketMakerRequest);
-        spawnPlaceOrdersActor();
+    private Behavior<Command> onInitializeMarketMaker(InitializeMarketMaker req) {
+        marketMakerRequest = req.getMarketMakerRequest();
+        getContext().getSelf().tell(SingleExecution.INSTANCE);
+        timer.startTimerWithFixedDelay(SingleExecution.INSTANCE, Duration.ofSeconds(marketMakerRequest.getDelay()));
+        return Behaviors.same();
+    }
+
+    private Behavior<Command> onSingleExecution() {
         checkBalanceActor.tell(new CheckBalanceActor.GetBalance(marketMakerRequest));
+        cancelOrdersActor.tell(CancelOrdersActor.CancelOrders.INSTANCE);
         return Behaviors.same();
     }
 
-    private Behavior<Command> onPlaceOrdersResp(PlaceOrdersWrappedResp resp) {
-        placeOrderActors.remove(resp.getResponse().getPlaceOrderActorId());
+    private Behavior<Command> onCancelOrdersResp(CancelOrdersWrappedResp resp) {
+        spawnPlaceOrdersActor();
         return Behaviors.same();
     }
 
-    private Behavior<Command> onStopPlaceOrdersActorsRequest() {
-        checkBalanceActor.tell(CheckBalanceActor.StopCheckBalanceActor.INSTANCE);
+    private Behavior<Command> onStopMarketMaker() {
+        cancelOrdersActor.tell(CancelOrdersActor.CancelOrders.INSTANCE);
         return stoppingBehavior();
     }
 
-    private Behavior<Command> onCreatePlaceOrdersRequestWhileStopping() {
-        if (placeOrderActors.isEmpty()) {
-            getContext().getLog().debug("MarketMakerActor for currencyPair {} stopped",
-                    marketMakerRequest.getCurrencyPair());
-            return Behaviors.stopped();
-        }
+    private Behavior<Command> onInitializeMarketMakerWhileStopping(InitializeMarketMaker req) {
         return Behaviors.same();
     }
 
-    private void spawnPlaceOrdersActor() {
-        String placeOrdersActorId = UUID.randomUUID().toString();
-        getContext().getLog().debug("Creating PlaceOrdersActor with id {}", placeOrdersActorId);
+    private Behavior<Command> onSingleExecutionWhileStopping() {
+        return Behaviors.same();
+    }
 
-        val adapter = getContext().messageAdapter(
-                PlaceOrdersActor.PlaceOrdersResponse.class, PlaceOrdersWrappedResp::new);
-        val actorBehavior = PlaceOrdersActor.create(
-                exchangeClientFactory, adapter, placeOrdersActorId);
+    private Behavior<Command> onCancelOrdersRespWhileStopping(CancelOrdersWrappedResp resp) {
+        getContext().getLog().debug("MarketMakerActor for currencyPair {} stopped",
+                marketMakerRequest.getCurrencyPair());
+        updatesTo.tell(new StopPlaceOrdersActorsResponse(marketMakerRequest));
+        return Behaviors.stopped();
+    }
 
-        val placeOrdersActor = getContext().spawn(
-                prepareDefaultManagersBehavior(actorBehavior),
-                ActorUtils.createUniqueName(PlaceOrdersActor.class),
-                prepareTags(Tuples.of("PlaceOrdersActorId", placeOrdersActorId)));
-
-        placeOrderActors.put(placeOrdersActorId, placeOrdersActor);
-
-        placeOrdersActor.tell(new PlaceOrdersActor.PlaceOrders(
-                marketMakerRequest, singleAmount, maxPriceDelta, minPriceDelta));
+    private Behavior<Command> onStopMarketMakerWhileStopping() {
+        return Behaviors.same();
     }
 
     private ActorRef<CheckBalanceActor.Command> spawnBalanceActor() {
@@ -153,19 +126,52 @@ public class MarketMakerActor extends AbstractBehavior<MarketMakerActor.Command>
         return checkBalanceActor;
     }
 
-    @ToString
-    public enum CreatePlaceOrdersActor implements Command {
-        INSTANCE
+    private ActorRef<CancelOrdersActor.Command> spawnCancelOrdersActor() {
+        val adapter = getContext().messageAdapter(
+                CancelOrdersActor.CancelOrdersResponse.class, CancelOrdersWrappedResp::new);
+        val actorBehavior = CancelOrdersActor.create(
+                exchangeClientFactory, notificationRepository, adapter, marketMakerRequest);
+
+        val cancelOrdersActor = getContext().spawn(
+                prepareDefaultManagersBehavior(actorBehavior),
+                ActorUtils.createUniqueName(PlaceOrdersActor.class));
+
+        return cancelOrdersActor;
+    }
+
+    private void spawnPlaceOrdersActor() {
+        val actorBehavior = PlaceOrdersActor.create(exchangeClientFactory, notificationRepository,
+                marketMakerRequest);
+        val placeOrdersActor = getContext().spawn(
+                prepareDefaultManagersBehavior(actorBehavior),
+                ActorUtils.createUniqueName(PlaceOrdersActor.class));
+
+        placeOrdersActor.tell(PlaceOrdersActor.PlaceOrders.INSTANCE);
+    }
+
+    @Value
+    public static class InitializeMarketMaker implements Command {
+        private final MarketMakerRequest marketMakerRequest;
     }
 
     @ToString
-    public enum StopPlaceOrdersActors implements Command {
+    private enum SingleExecution implements Command {
         INSTANCE
     }
 
     @Value
-    public static class PlaceOrdersWrappedResp implements Command {
-        private final PlaceOrdersActor.PlaceOrdersResponse response;
+    public static class CancelOrdersWrappedResp implements Command {
+        private final CancelOrdersActor.CancelOrdersResponse response;
+    }
+
+    @ToString
+    public enum StopMarketMaker implements Command {
+        INSTANCE
+    }
+
+    @Value
+    public static class StopPlaceOrdersActorsResponse {
+        private final MarketMakerRequest marketMakerRequest;
     }
 
     public interface Command {

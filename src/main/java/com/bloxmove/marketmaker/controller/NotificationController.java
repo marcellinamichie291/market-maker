@@ -1,7 +1,6 @@
 package com.bloxmove.marketmaker.controller;
 
 import com.bloxmove.marketmaker.model.Notification;
-import com.bloxmove.marketmaker.model.NotificationStatus;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -26,5 +25,5 @@ public interface NotificationController {
     @Operation(summary = "Get notifications")
     @GetMapping
     List<Notification> get(@Parameter(name = "status",
-            description = "Notification status", required = true) NotificationStatus status);
+            description = "Notification status", required = true) String status);
 }

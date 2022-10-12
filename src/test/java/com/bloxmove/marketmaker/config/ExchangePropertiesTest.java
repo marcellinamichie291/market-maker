@@ -16,8 +16,8 @@ class ExchangePropertiesTest {
     @Test
     void shouldTestPropertiesValidation() {
         assertThat(exchangeProperties).isNotNull();
+        assertThat(exchangeProperties.getExchange(BITMART.toString())).isNotNull();
+        assertThat(exchangeProperties.getUrl(BITMART.toString())).isNotBlank();
         assertThat(exchangeProperties.getApiKey(BITMART.toString())).isNotBlank();
-        assertThat(exchangeProperties.getApiSecret(BITMART.toString())).isNotBlank();
-        assertThat(exchangeProperties.getMemo(BITMART.toString())).isNotBlank();
     }
 }

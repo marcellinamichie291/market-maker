@@ -18,6 +18,7 @@ import lombok.Value;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.concurrent.CompletableFuture;
 
 import static com.bloxmove.marketmaker.model.NotificationType.LOW_BALANCE;
 
@@ -52,40 +53,55 @@ public class CheckBalanceActor extends AbstractBehavior<CheckBalanceActor.Comman
     public Receive<Command> createReceive() {
         return newReceiveBuilder()
                 .onMessage(GetBalance.class, this::onGetBalanceRequest)
+                .onMessage(GetBalanceResponse.class, this::onGetBalanceResponse)
                 .onMessage(StopCheckBalanceActor.class, it -> onStopCheckBalanceActor())
                 .build();
     }
 
-    private Behavior<CheckBalanceActor.Command> onGetBalanceRequest(GetBalance request) {
+    private Behavior<Command> onGetBalanceRequest(GetBalance request) {
         MarketMakerRequest marketMakerRequest = request.getMarketMakerRequest();
+
+        ExchangeClient exchangeClient = exchangeClientFactory.getExchangeClient(marketMakerRequest.getExchangeName());
+        CompletableFuture<Balance> balanceFuture = exchangeClient.getBalance();
+
+        getContext().pipeToSelf(balanceFuture, (balance, error) ->
+                new GetBalanceResponse(marketMakerRequest, balance, error));
+
+        return Behaviors.same();
+    }
+
+    private Behavior<Command> onGetBalanceResponse(GetBalanceResponse response) {
+        if (response.getError() != null) {
+            return Behaviors.same();
+        }
+        MarketMakerRequest marketMakerRequest = response.getMarketMakerRequest();
+        Balance balance = response.getBalance();
         String[] currencies = marketMakerRequest.getCurrencyPair().split("_");
         String firstCurrency = currencies[0];
         String secondCurrency = currencies[1];
 
-        ExchangeClient exchangeClient = exchangeClientFactory.getExchangeClient(marketMakerRequest.getExchangeName());
-        Balance balance = exchangeClient.getBalance(firstCurrency, secondCurrency);
-        BigDecimal firstCurrencyBalance = balance.getFirstCurrencyBalance();
-        BigDecimal secondCurrencyBalance = balance.getSecondCurrencyBalance();
+        BigDecimal firstCurrencyBalance = balance.getCurrencyBalance(firstCurrency).getValue();
+        BigDecimal secondCurrencyBalance = balance.getCurrencyBalance(secondCurrency).getValue();
 
         if (firstCurrencyCheck && firstCurrencyBalance != null && marketMakerRequest.getMinFirstCurrency()
-                .compareTo(balance.getFirstCurrencyBalance()) > 0) {
+                .compareTo(firstCurrencyBalance) > 0) {
             getContext().getLog().debug("Balance of {} is under minimal required", firstCurrency);
             firstCurrencyCheck = false;
             createNotification(LOW_BALANCE.getMessage(firstCurrency));
         }
         if (secondCurrencyCheck && secondCurrencyBalance != null && marketMakerRequest.getMinSecondCurrency()
-                .compareTo(balance.getSecondCurrencyBalance()) > 0) {
+                .compareTo(secondCurrencyBalance) > 0) {
             getContext().getLog().debug("Balance of {} is under minimal required", secondCurrency);
             secondCurrencyCheck = false;
             createNotification(LOW_BALANCE.getMessage(secondCurrency));
         }
 
         if (!firstCurrencyCheck && firstCurrencyBalance != null && marketMakerRequest.getMinFirstCurrency()
-                .compareTo(balance.getFirstCurrencyBalance()) < 0) {
+                .compareTo(firstCurrencyBalance) < 0) {
             firstCurrencyCheck = true;
         }
         if (!secondCurrencyCheck && secondCurrencyBalance != null && marketMakerRequest.getMinSecondCurrency()
-                .compareTo(balance.getSecondCurrencyBalance()) < 0) {
+                .compareTo(secondCurrencyBalance) < 0) {
             secondCurrencyCheck = true;
         }
         return Behaviors.same();
@@ -110,6 +126,13 @@ public class CheckBalanceActor extends AbstractBehavior<CheckBalanceActor.Comman
     @Value
     public static class GetBalance implements Command {
         private final MarketMakerRequest marketMakerRequest;
+    }
+
+    @Value
+    public static class GetBalanceResponse implements Command {
+        private final MarketMakerRequest marketMakerRequest;
+        private final Balance balance;
+        private final Throwable error;
     }
 
     @ToString

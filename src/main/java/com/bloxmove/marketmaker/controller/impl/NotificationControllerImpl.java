@@ -29,7 +29,7 @@ public class NotificationControllerImpl implements NotificationController {
     }
 
     @Override
-    public List<Notification> get(NotificationStatus status) {
-        return notificationRepository.findByStatus(status);
+    public List<Notification> get(String status) {
+        return notificationRepository.findByStatus(NotificationStatus.valueOf(status));
     }
 }

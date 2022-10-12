@@ -1,3 +1,20 @@
+### Set up
+1. Download [**docker-desktop**](https://www.docker.com/products/docker-desktop/)
+2. Establish mongodb database defined in `docker-compose.yml` by running command inside `market-maker` package: <br>
+```docker compose up```<br>
+Make sure in your docker desktop application that containers `mongodb` and `mongo-express` are up and running<br>
+To access database use `http://localhost:8081`
+3. Download [**IntelliJ IDEA**](https://www.jetbrains.com/idea/download)
+4. Start backend by running `MarketMakerApplication`<br>
+To check existing endpoints implemented check `http://localhost:8080/webjars/swagger-ui/index.html#/`
+5. Download [**Node.js**](https://nodejs.org/en/) which includes [**Node Package Manager**](https://docs.npmjs.com/getting-started) to be able to install `Angular CLI`
+6. Install `Angular CLI` using command: <br>
+```npm install -g @angular/cli```
+7. Start frontend by running command inside `market-maker/market-maker-front` package:<br>
+```ng serve```<br>
+It should start frontend by default on `http://localhost:4200`
+   
+
 ![`market_maker_scheme`](https://github.com/bloxmove-com/market-maker/blob/main/src/main/resources/images/market_maker_scheme.PNG)
 
 Each actor is working on separate thread and communication between each other using events

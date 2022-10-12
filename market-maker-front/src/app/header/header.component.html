@@ -1,0 +1,22 @@
+<nav class="navbar navbar-expand-lg navbar-light bg-light">
+    <a class="navbar-brand" href="">
+      <img src="https://bloxmove.com/wp-content/uploads/2021/03/cropped-bloxmove_colour.png" class="brand"/>
+    </a>
+    <button class="navbar-toggler btn-outline-success" type="button" data-toggle="collapse" data-target="#navbarColor02" aria-controls="navbarColor02" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarColor02">
+       <ul class="navbar-nav mr-auto">
+          <li class="nav-item active" >
+             <a class="nav-link btn-outline-success rounded-pill" routerLink="/notification" >Notifications <span class="sr-only">(current)</span>
+                <span *ngIf="orangeNotificationsCount != 0" class="badge badge-warning">{{orangeNotificationsCount}}</span>
+                <span *ngIf="redNotificationsCount != 0" class="badge badge-danger">{{redNotificationsCount}}</span>
+            </a>
+          </li>
+          <li class="nav-item active" >
+            <a class="nav-link btn-outline-success rounded-pill" routerLink="/balance" >Balance<span class="sr-only">(current)</span>
+           </a>
+         </li>
+       </ul>
+    </div>
+</nav>

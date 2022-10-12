@@ -12,7 +12,6 @@ import com.bloxmove.marketmaker.model.ExchangeName;
 import com.bloxmove.marketmaker.model.MarketMaker;
 import com.bloxmove.marketmaker.model.MarketMakerRequest;
 import com.bloxmove.marketmaker.model.MarketMakerShortRequest;
-import com.bloxmove.marketmaker.model.MarketMakerStatus;
 import com.bloxmove.marketmaker.service.MailService;
 import com.bloxmove.marketmaker.service.factory.ExchangeClientFactory;
 import com.bloxmove.marketmaker.service.mapper.MarketMakerMapper;
@@ -70,6 +69,7 @@ public class ExchangeActor extends AbstractBehavior<ExchangeActor.Command> {
                 .onMessage(CreateInitialMarketMakerActor.class, this::onCreateInitialMarketMakerActor)
                 .onMessage(CreateMarketMakerActor.class, this::onCreateMarketMakerActor)
                 .onMessage(StopMarketMakerActor.class, this::onStopMarketMakerActor)
+                .onMessage(StopPlaceOrdersActorsWrappedResp.class, this::onStopPlaceOrdersActorsWrappedResp)
                 .build();
     }
 
@@ -89,6 +89,7 @@ public class ExchangeActor extends AbstractBehavior<ExchangeActor.Command> {
             marketMaker
                     .status(WORKING)
                     .created(Instant.now());
+            spawnMarketMakerActor(marketMakerRequest);
         } else {
             MarketMaker marketMakerFromDb = marketMakerRepository.findByCurrencyPairAndStatus(currencyPair, WORKING);
             marketMaker
@@ -96,14 +97,12 @@ public class ExchangeActor extends AbstractBehavior<ExchangeActor.Command> {
                     .status(marketMakerFromDb.getStatus())
                     .created(marketMakerFromDb.getCreated())
                     .updated(Instant.now());
-            ActorRef<MarketMakerActor.Command> exchangeActor = marketMakerActors.get(currencyPair);
-            exchangeActor.tell(MarketMakerActor.StopPlaceOrdersActors.INSTANCE);
-            marketMakerActors.remove(currencyPair);
+            ActorRef<MarketMakerActor.Command> marketMakerActor = marketMakerActors.get(currencyPair);
+            marketMakerActor.tell(new MarketMakerActor.InitializeMarketMaker(marketMakerRequest));
         }
 
         marketMakerRepository.save(marketMaker);
         request.getReplyTo().tell(StatusReply.success(Done.done()));
-        spawnMarketMakerActor(marketMakerRequest);
 
         return Behaviors.same();
     }
@@ -122,14 +121,19 @@ public class ExchangeActor extends AbstractBehavior<ExchangeActor.Command> {
         marketMakerRepository.save(marketMaker);
 
         request.getReplyTo().tell(StatusReply.success(Done.done()));
-        ActorRef<MarketMakerActor.Command> exchangeActor = marketMakerActors.get(currencyPair);
-        exchangeActor.tell(MarketMakerActor.StopPlaceOrdersActors.INSTANCE);
+        ActorRef<MarketMakerActor.Command> marketMakerActor = marketMakerActors.get(currencyPair);
+        marketMakerActor.tell(MarketMakerActor.StopMarketMaker.INSTANCE);
         marketMakerActors.remove(currencyPair);
 
+        return Behaviors.same();
+    }
+
+    private Behavior<Command> onStopPlaceOrdersActorsWrappedResp(StopPlaceOrdersActorsWrappedResp resp) {
+        MarketMakerRequest marketMakerRequest = resp.getResponse().getMarketMakerRequest();
         if (marketMakerActors.isEmpty()) {
-            updatesTo.tell(new StopMarketMakerActorResponse(marketMakerShortRequest.getExchangeName()));
+            updatesTo.tell(new StopMarketMakerActorResponse(marketMakerRequest.getExchangeName()));
             getContext().getLog().debug("There is no market makers for exchange {}. ExchangeActor stopped",
-                    marketMakerShortRequest.getExchangeName());
+                    marketMakerRequest.getExchangeName());
             return Behaviors.stopped();
         }
 
@@ -140,8 +144,11 @@ public class ExchangeActor extends AbstractBehavior<ExchangeActor.Command> {
         String currencyPair = marketMakerRequest.getCurrencyPair();
         getContext().getLog().debug("Creating MarketMakerActor with currencyPair {}", currencyPair);
 
+        val adapter = getContext().messageAdapter(
+                MarketMakerActor.StopPlaceOrdersActorsResponse.class,
+                StopPlaceOrdersActorsWrappedResp::new);
         val actorBehavior = MarketMakerActor.create(
-                exchangeClientFactory, mailService, notificationRepository, marketMakerRequest);
+                exchangeClientFactory, mailService, notificationRepository, adapter, marketMakerRequest);
 
         val marketMakerActor = getContext().spawn(
                 prepareDefaultManagersBehavior(actorBehavior),
@@ -149,6 +156,7 @@ public class ExchangeActor extends AbstractBehavior<ExchangeActor.Command> {
                 prepareTags(Tuples.of("CurrencyPair", currencyPair)));
 
         marketMakerActors.put(currencyPair, marketMakerActor);
+        marketMakerActor.tell(new MarketMakerActor.InitializeMarketMaker(marketMakerRequest));
     }
 
     @Value
@@ -166,6 +174,11 @@ public class ExchangeActor extends AbstractBehavior<ExchangeActor.Command> {
     public static class StopMarketMakerActor implements Command {
         private final MarketMakerShortRequest marketMakerShortRequest;
         private final ActorRef<StatusReply<Done>> replyTo;
+    }
+
+    @Value
+    public static class StopPlaceOrdersActorsWrappedResp implements Command {
+        private final MarketMakerActor.StopPlaceOrdersActorsResponse response;
     }
 
     @Value

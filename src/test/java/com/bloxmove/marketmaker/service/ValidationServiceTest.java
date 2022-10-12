@@ -7,8 +7,6 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 
-import static com.bloxmove.marketmaker.TestUtils.MAX_PRICE;
-import static com.bloxmove.marketmaker.TestUtils.TARGET_PRICE;
 import static com.bloxmove.marketmaker.TestUtils.createMarketMakerRequest;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
@@ -24,23 +22,32 @@ class ValidationServiceTest {
     }
 
     @Test
-    void shouldThrowIllegalArgumentExceptionWhenMinPriceHigherThanTargetPrice() {
-        BigDecimal minPrice = BigDecimal.valueOf(999);
-        marketMakerRequest.setMinPrice(minPrice);
+    void shouldThrowIllegalArgumentExceptionWhenMinPriceHigherThanOne() {
+        marketMakerRequest.setMinPrice(BigDecimal.valueOf(1.05));
         assertThatIllegalArgumentException()
                 .isThrownBy(() -> validationService.validate(marketMakerRequest))
-                .withMessage(String.format("Min price '%s' should be lower than target price '%s'",
-                        minPrice, TARGET_PRICE));
+                .withMessage("Min price should be lower than 1");
     }
 
     @Test
-    void shouldThrowIllegalArgumentExceptionWhenTargetPriceHigherThanMaxPrice() {
-        BigDecimal targetPrice = BigDecimal.valueOf(999);
-        marketMakerRequest.setTargetPrice(targetPrice);
+    void shouldThrowIllegalArgumentExceptionWhenTargetPriceIsNotInRange() {
+        marketMakerRequest.setTargetPrice(BigDecimal.valueOf(1.2));
         assertThatIllegalArgumentException()
                 .isThrownBy(() -> validationService.validate(marketMakerRequest))
-                .withMessage(String.format("Target price '%s' should be lower than max price '%s'",
-                        targetPrice, MAX_PRICE));
+                .withMessage("Target price should be in range from 0.95 to 1.05");
+
+        marketMakerRequest.setTargetPrice(BigDecimal.valueOf(0.8));
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> validationService.validate(marketMakerRequest))
+                .withMessage("Target price should be in range from 0.95 to 1.05");
+    }
+
+    @Test
+    void shouldThrowIllegalArgumentExceptionWhenMaxPriceHigherLowerThanOne() {
+        marketMakerRequest.setMaxPrice(BigDecimal.valueOf(0.8));
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> validationService.validate(marketMakerRequest))
+                .withMessage("Max price should be higher than 1");
     }
 
     @Test
@@ -50,14 +57,5 @@ class ValidationServiceTest {
         assertThatIllegalArgumentException()
                 .isThrownBy(() -> validationService.validate(marketMakerRequest))
                 .withMessage("Amount should be more than 0.1");
-    }
-
-    @Test
-    void shouldThrowIllegalArgumentExceptionWhenAmountMultipliedByPriceLessThanFive() {
-        BigDecimal amount = BigDecimal.valueOf(12);
-        marketMakerRequest.setAmount(amount);
-        assertThatIllegalArgumentException()
-                .isThrownBy(() -> validationService.validate(marketMakerRequest))
-                .withMessage("Single order amount*price should be more than 5");
     }
 }

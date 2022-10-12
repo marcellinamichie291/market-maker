@@ -143,4 +143,40 @@ Desktop.ini
 ######################
 # ESLint
 ######################
-.eslintcache
+/market-maker-front/.eslintcache
+
+# Compiled output
+/market-maker-front/dist
+/market-maker-front/tmp
+/market-maker-front/out-tsc
+/market-maker-front/bazel-out
+
+# Node
+/market-maker-front/node_modules
+/market-maker-front/npm-debug.log
+/market-maker-front/yarn-error.log
+
+# IDEs and editors
+/market-maker-front/.c9/
+/market-maker-front/*.sublime-workspace
+
+# Visual Studio Code
+/market-maker-front/.vscode/*
+/market-maker-front/!.vscode/settings.json
+/market-maker-front/!.vscode/tasks.json
+/market-maker-front/!.vscode/launch.json
+/market-maker-front/!.vscode/extensions.json
+/market-maker-front/.history/*
+
+# Miscellaneous
+/market-maker-front/.angular/cache/
+/market-maker-front/.sass-cache/
+/market-maker-front/connect.lock
+/market-maker-front/coverage
+/market-maker-front/libpeerconnection.log
+/market-maker-front/testem.log
+/market-maker-front/typings
+
+# System files
+/market-maker-front/.DS_Store
+/market-maker-front/Thumbs.db

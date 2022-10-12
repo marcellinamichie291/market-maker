@@ -3,9 +3,13 @@ package com.bloxmove.marketmaker.service.client;
 import com.bloxmove.marketmaker.model.Balance;
 import com.bloxmove.marketmaker.model.Order;
 
+import java.util.concurrent.CompletableFuture;
+
 public interface ExchangeClient {
 
-    Order placeOrder(String currencyPair, String side, String type, String size, String price);
+    CompletableFuture<Order> placeOrder(String currencyPair, String side, String type, String size, String price);
 
-    Balance getBalance(String firstCurrency, String secondCurrency);
+    CompletableFuture<Void> cancelOrders(String currencyPair, String side);
+
+    CompletableFuture<Balance> getBalance();
 }
